@@ -1,0 +1,40 @@
+zict (2.0.0-1) unstable; urgency=medium
+
+  [ Ondřej Nový ]
+  * d/control: Set Vcs-* to salsa.debian.org
+  * d/watch: Use https protocol
+  * d/control: Remove ancient X-Python-Version field
+  * d/control: Remove ancient X-Python3-Version field
+  * Convert git repository from git-dpm to gbp layout
+  * Use debhelper-compat instead of debian/compat.
+
+  [ Debian Janitor ]
+  * Bump debhelper from old 9 to 12.
+  * Set upstream metadata fields: Bug-Database, Bug-Submit, Repository,
+    Repository-Browse.
+
+  [ Diane Trout ]
+  * Update to Standards-Version 4.5.0
+  * New upstream release. (Closes: #965167)
+
+ -- Diane Trout <diane@ghic.org>  Fri, 17 Jul 2020 13:22:51 -0700
+
+zict (0.1.3-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Update Standards-Version to 4.1.1. No changes needed.
+  * Remove unnecessary Testsuite header.
+
+ -- Diane Trout <diane@ghic.org>  Fri, 13 Oct 2017 08:30:14 -0700
+
+zict (0.1.1-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Diane Trout <diane@ghic.org>  Fri, 21 Apr 2017 16:49:12 -0700
+
+zict (0.1.0-1) unstable; urgency=low
+
+  * Initial packaging. (Closes: #847518)
+
+ -- Diane Trout <diane@ghic.org>  Mon, 05 Dec 2016 16:30:07 -0800
