@@ -1,8 +1,15 @@
-from .common import ZictBase, close
+from __future__ import annotations
+
+from collections.abc import Callable, Iterable, Iterator, MutableMapping
+from typing import Generic, TypeVar
+
+from zict.common import KT, VT, ZictBase, close, flush
+
+WT = TypeVar("WT")
 
 
-class Func(ZictBase):
-    """ Buffer a MutableMapping with a pair of input/output functions
+class Func(ZictBase[KT, VT], Generic[KT, VT, WT]):
+    """Buffer a MutableMapping with a pair of input/output functions
 
     Parameters
     ----------
@@ -20,7 +27,7 @@ class Func(ZictBase):
     >>> def halve(x):
     ...     return x / 2
 
-    >>> d = dict()
+    >>> d = {}
     >>> f = Func(double, halve, d)
     >>> f['x'] = 10
     >>> d
@@ -29,58 +36,56 @@ class Func(ZictBase):
     10.0
     """
 
-    def __init__(self, dump, load, d):
+    dump: Callable[[VT], WT]
+    load: Callable[[WT], VT]
+    d: MutableMapping[KT, WT]
+
+    def __init__(
+        self,
+        dump: Callable[[VT], WT],
+        load: Callable[[WT], VT],
+        d: MutableMapping[KT, WT],
+    ):
+        super().__init__()
         self.dump = dump
         self.load = load
         self.d = d
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: KT) -> VT:
         return self.load(self.d[key])
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: KT, value: VT) -> None:
         self.d[key] = self.dump(value)
 
-    def __contains__(self, key):
+    def __contains__(self, key: object) -> bool:
         return key in self.d
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: KT) -> None:
         del self.d[key]
 
-    def keys(self):
-        return self.d.keys()
+    def _do_update(self, items: Iterable[tuple[KT, VT]]) -> None:
+        it = ((k, self.dump(v)) for k, v in items)
+        self.d.update(it)
 
-    def values(self):
-        return map(self.load, self.d.values())
-
-    def items(self):
-        return ((k, self.load(v)) for k, v in self.d.items())
-
-    def _do_update(self, items):
-        self.d.update((k, self.dump(v)) for k, v in items)
-
-    def __iter__(self):
+    def __iter__(self) -> Iterator[KT]:
         return iter(self.d)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.d)
 
-    def __str__(self):
-        return "<Func: %s<->%s %s>" % (
-            funcname(self.dump),
-            funcname(self.load),
-            str(self.d),
-        )
+    def __str__(self) -> str:
+        return f"<Func: {funcname(self.dump)}<->{funcname(self.load)} {self.d}>"
 
     __repr__ = __str__
 
-    def flush(self):
-        self.d.flush()
+    def flush(self) -> None:
+        flush(self.d)
 
-    def close(self):
+    def close(self) -> None:
         close(self.d)
 
 
-def funcname(func):
+def funcname(func: Callable) -> str:
     """Get the name of a function."""
     while hasattr(func, "func"):
         func = func.func

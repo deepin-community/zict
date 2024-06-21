@@ -1,9 +1,14 @@
-from .zip import Zip
-from .file import File
-from .func import Func
-from .lru import LRU
-from .buffer import Buffer
-from .sieve import Sieve
-from .lmdb import LMDB
+from zict.async_buffer import AsyncBuffer as AsyncBuffer
+from zict.buffer import Buffer as Buffer
+from zict.cache import Cache as Cache
+from zict.cache import WeakValueMapping as WeakValueMapping
+from zict.file import File as File
+from zict.func import Func as Func
+from zict.lmdb import LMDB as LMDB
+from zict.lru import LRU as LRU
+from zict.sieve import Sieve as Sieve
+from zict.utils import InsertionSortedSet as InsertionSortedSet
+from zict.zip import Zip as Zip
 
-__version__ = "2.0.0"
+# Must be kept aligned with setup.cfg
+__version__ = "3.0.0"

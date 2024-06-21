@@ -1,0 +1,11 @@
+--- a/setup.cfg
++++ b/setup.cfg
+@@ -62,6 +62,8 @@
+ timeout = 180
+ markers = 
+ 	stress: slow-running stress test with a random component. Pass --stress <n> to change number of reruns.
++        repeat: mark test for repeat execution
++        asyncio: mark test uses asyncio
+ 
+ [isort]
+ sections = FUTURE,STDLIB,THIRDPARTY,FIRSTPARTY,LOCALFOLDER

@@ -1,11 +1,16 @@
+from __future__ import annotations
+
 from collections import defaultdict
-from itertools import chain
+from collections.abc import Callable, Iterable, Iterator, Mapping, MutableMapping
+from typing import Generic, TypeVar
 
-from .common import ZictBase, close
+from zict.common import KT, VT, ZictBase, close, discard, flush, locked
+
+MKT = TypeVar("MKT")
 
 
-class Sieve(ZictBase):
-    """ Store values in different mappings based on a selector's
+class Sieve(ZictBase[KT, VT], Generic[KT, VT, MKT]):
+    """Store values in different mappings based on a selector's
     output.
 
     This creates a MutableMapping combining several underlying
@@ -17,85 +22,112 @@ class Sieve(ZictBase):
     mappings: dict of {mapping key: MutableMapping}
     selector: callable (key, value) -> mapping key
 
+    Notes
+    -----
+    If you call methods of this class from multiple threads, access will be fast as long
+    as the ``__contains__`` and ``__delitem__`` methods of all underlying mappins are
+    fast. ``__getitem__`` and ``__setitem__`` methods of the underlying mappings are not
+    protected by locks.
+
     Examples
     --------
     >>> small = {}
     >>> large = DataBase()                        # doctest: +SKIP
     >>> mappings = {True: small, False: large}    # doctest: +SKIP
     >>> def is_small(key, value):                 # doctest: +SKIP
-            return sys.getsizeof(value) < 10000
+    ...     return sys.getsizeof(value) < 10000   # doctest: +SKIP
     >>> d = Sieve(mappings, is_small)             # doctest: +SKIP
-
-    See Also
-    --------
-    Buffer
     """
 
-    def __init__(self, mappings, selector):
+    mappings: Mapping[MKT, MutableMapping[KT, VT]]
+    selector: Callable[[KT, VT], MKT]
+    key_to_mapping: dict[KT, MutableMapping[KT, VT]]
+    gen: int
+
+    def __init__(
+        self,
+        mappings: Mapping[MKT, MutableMapping[KT, VT]],
+        selector: Callable[[KT, VT], MKT],
+    ):
+        super().__init__()
         self.mappings = mappings
         self.selector = selector
         self.key_to_mapping = {}
+        self.gen = 0
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: KT) -> VT:
+        # Note that this may raise KeyError if you call it in the middle of __setitem__
+        # or update for an already existing key
         return self.key_to_mapping[key][key]
 
-    def __setitem__(self, key, value):
-        old_mapping = self.key_to_mapping.get(key)
-        mapping = self.mappings[self.selector(key, value)]
-        if old_mapping is not None and old_mapping is not mapping:
-            del old_mapping[key]
-        mapping[key] = value
+    @locked
+    def __setitem__(self, key: KT, value: VT) -> None:
+        discard(self, key)
+        mkey = self.selector(key, value)
+        mapping = self.mappings[mkey]
         self.key_to_mapping[key] = mapping
+        self.gen += 1
+        gen = self.gen
 
-    def __delitem__(self, key):
-        del self.key_to_mapping.pop(key)[key]
+        with self.unlock():
+            mapping[key] = value
 
-    def _do_update(self, items):
+        if gen != self.gen and self.key_to_mapping.get(key) is not mapping:
+            # Multithreaded race condition
+            discard(mapping, key)
+
+    @locked
+    def __delitem__(self, key: KT) -> None:
+        mapping = self.key_to_mapping.pop(key)
+        self.gen += 1
+        discard(mapping, key)
+
+    @locked
+    def _do_update(self, items: Iterable[tuple[KT, VT]]) -> None:
         # Optimized update() implementation issuing a single update()
         # call per underlying mapping.
         updates = defaultdict(list)
-        mapping_ids = dict((id(m), m) for m in self.mappings.values())
+        self.gen += 1
+        gen = self.gen
 
         for key, value in items:
-            old_mapping = self.key_to_mapping.get(key)
-            mapping = self.mappings[self.selector(key, value)]
-            if old_mapping is not None and old_mapping is not mapping:
-                del old_mapping[key]
-            # Can't hash a mutable mapping, so use its id() instead
-            updates[id(mapping)].append((key, value))
+            old_mapping = self.key_to_mapping.pop(key, None)
+            if old_mapping is not None:
+                discard(old_mapping, key)
+            mkey = self.selector(key, value)
+            mapping = self.mappings[mkey]
+            updates[mkey].append((key, value))
+            self.key_to_mapping[key] = mapping
 
-        for mid, mitems in updates.items():
-            mapping = mapping_ids[mid]
-            mapping.update(mitems)
-            for key, _ in mitems:
-                self.key_to_mapping[key] = mapping
+        with self.unlock():
+            for mkey, mitems in updates.items():
+                mapping = self.mappings[mkey]
+                mapping.update(mitems)
 
-    def keys(self):
-        return chain.from_iterable(self.mappings.values())
+        if gen != self.gen:
+            # Multithreaded race condition
+            for mkey, mitems in updates.items():
+                mapping = self.mappings[mkey]
+                for key, _ in mitems:
+                    if self.key_to_mapping.get(key) is not mapping:
+                        discard(mapping, key)
 
-    def values(self):
-        return chain.from_iterable(m.values() for m in self.mappings.values())
+    def __len__(self) -> int:
+        return len(self.key_to_mapping)
 
-    def items(self):
-        return chain.from_iterable(m.items() for m in self.mappings.values())
+    def __iter__(self) -> Iterator[KT]:
+        return iter(self.key_to_mapping)
 
-    def __len__(self):
-        return sum(map(len, self.mappings.values()))
-
-    __iter__ = keys
-
-    def __contains__(self, key):
+    def __contains__(self, key: object) -> bool:
         return key in self.key_to_mapping
 
-    def __str__(self):
-        return "Sieve<%s>" % (str(self.mappings),)
+    def __str__(self) -> str:
+        return f"Sieve<{self.mappings}>"
 
     __repr__ = __str__
 
-    def flush(self):
-        for m in self.mappings.values():
-            m.flush()
+    def flush(self) -> None:
+        flush(*self.mappings.values())
 
-    def close(self):
-        for m in self.mappings.values():
-            close(m)
+    def close(self) -> None:
+        close(*self.mappings.values())
