@@ -1,3 +1,35 @@
+zict (3.0.0-2) unstable; urgency=medium
+
+  * Add update-pytest-markers.patch to list repeat marker
+    Needed for CI test failure
+  * Split command to run autopkgtests into a separate file run-tests
+  * Add python3-pytest-timeout as a autopkgtest dependency
+
+ -- Diane Trout <diane@ghic.org>  Sat, 29 Jul 2023 22:10:47 -0700
+
+zict (3.0.0-1) unstable; urgency=medium
+
+  * Team upload.
+  * New upstream release 3.0.0.
+    + Add support for python 3.11.
+  * Bump Standards-Version to 4.6.2.
+  * debian/control:
+    + Mark test build-dependency as <!nocheck>.
+    + Drop dependency on heapdict.
+
+ -- Boyuan Yang <byang@debian.org>  Sat, 24 Jun 2023 16:11:22 -0400
+
+zict (2.2.0-1) unstable; urgency=medium
+
+  * Team upload.
+  * New upstream release 2.2.0.
+  * debian/control:
+    + Update Debian Python Team maintainer email address.
+    + Bump debhelper compat to v13.
+    + Bump Standards-Version to 4.6.1.
+
+ -- Boyuan Yang <byang@debian.org>  Sat, 04 Jun 2022 11:28:54 -0400
+
 zict (2.0.0-1) unstable; urgency=medium
 
   [ Ondřej Nový ]

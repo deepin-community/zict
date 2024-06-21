@@ -1,22 +1,25 @@
 Source: zict
-Maintainer: Debian Python Modules Team <python-modules-team@lists.alioth.debian.org>
-Uploaders: Diane Trout <diane@ghic.org>
 Section: python
 Priority: optional
-Build-Depends: debhelper-compat (= 12),
-               dh-python,
-               python3-all,
-               python3-heapdict,
-               python3-pytest,
-               python3-setuptools
-Standards-Version: 4.5.0
+Maintainer: Debian Python Team <team+python@tracker.debian.org>
+Uploaders:
+ Diane Trout <diane@ghic.org>,
+Build-Depends:
+ debhelper-compat (= 13),
+ dh-python,
+ python3-all,
+ python3-pytest <!nocheck>,
+ python3-setuptools,
+Standards-Version: 4.6.2
 Homepage: https://github.com/mrocklin/zict/
-Vcs-Git: https://salsa.debian.org/python-team/modules/zict.git
-Vcs-Browser: https://salsa.debian.org/python-team/modules/zict
+Vcs-Git: https://salsa.debian.org/python-team/packages/zict.git
+Vcs-Browser: https://salsa.debian.org/python-team/packages/zict
 
 Package: python3-zict
 Architecture: all
-Depends: ${misc:Depends}, ${python3:Depends}
+Depends:
+ ${misc:Depends},
+ ${python3:Depends},
 Description: Mutable mapping tools for Python 3
  The dictionary / mutable mapping interface is powerful and
  multi-faceted.
